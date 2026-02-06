@@ -1,7 +1,10 @@
 const express = require("express");
+const connectDB = require("./config/db");
 const bodyParser = require("body-parser");
 const app = express();
 const sqlite3 = require("sqlite3").verbose();
+
+const Task = require("./models/task2Model");
 
 const dbName = "tasks.db";
 
@@ -11,9 +14,11 @@ const db = new sqlite3.Database(dbName);
 
 app.use(bodyParser.json());
 
-const checkExist = (task, res) => {
+connectDB();
+
+const checkExist = (task, res, err) => {
   if (!task) {
-    return res.status(404).json({ message: "Task not found" });
+    return res.status(404).json({ message: err ?? "Task not found" });
   }
 };
 
@@ -35,13 +40,19 @@ app.get("/tasks", (req, res) => {
   });
 });
 
-app.post("/tasks", (req, res) => {
-  const newTask = req.body;
-  db.run("INSERT INTO tasks (text) VALUES (?)", [newTask.text], (err) => {
-    serverError(err, res);
-
+app.post("/tasks", async (req, res) => {
+  try {
+    const newTask = req.body;
+    const task = await Task.create({
+      text: newTask.text,
+      
+    })
+    checkExist(task, res, "Завдання не створено");
     return res.status(201).json({ id: this.lastID });
-  });
+  } catch (e) {
+    console.error('Task creation error: ', e);
+    serverError(e, res);
+  }
 });
 
 app.get("/tasks/:id", (req, res) => {
