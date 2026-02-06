@@ -1,2 +1,15 @@
 const mongoose = require("mongoose");
-const URI = "mongodb+srv://artvanay007n_db_user:<db_password>@cluster0.vgiagln.mongodb.net/?appName=Cluster0";
+
+const { MONGO_URI } = require("./secret");
+
+const connectDB = async () => {
+  try {
+    await mongoose.connect(MONGO_URI);
+    console.log("✅ MongoDB connected");
+  } catch (err) {
+    console.error("❌ MongoDB error:", err.message);
+    process.exit(1);
+  }
+};
+
+module.exports = connectDB;
