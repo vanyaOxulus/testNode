@@ -1,6 +1,6 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
-const { MONGO_URI } = require("./secret");
+import { MONGO_URI } from "./secret.js";
 
 const connectDB = async () => {
   try {
@@ -12,4 +12,4 @@ const connectDB = async () => {
   }
 };
 
-module.exports = connectDB;
+export default connectDB;

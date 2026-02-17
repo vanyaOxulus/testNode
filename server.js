@@ -1,26 +1,68 @@
-const express = require("express");
+import dotenv from "dotenv";
+dotenv.config();
 
-const connectDB = require("./config/db");
-const bodyParser = require("body-parser");
+import express from "express";
+import connectDB from "./config/db.js";
 
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import multer from "multer";
+
+// Імпорт моделей та middleware
+import { Task } from "./models/task2Model.js";
+import { User } from "./models/userModel.js";
+import {checkRole} from "./middleware/checkRole.js";
+import JWTAuth from "./middleware/JWTAuth.js";
 
 const app = express();
-const port = 3000;
-app.use(bodyParser.json());
-
-const { Task } = require("./models/task2Model");
-const User = require("./models/userModel");
-const checkAuth = require("./middleware/checkAuth");
-const checkRole = require("./middleware/checkRole");
-const JWTAuth = require("./middleware/JWTAuth");
-
 connectDB();
+const port = 3000;
+
+app.use(express.json());
+app.use("/uploads", express.static("uploads"));
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "./uploads");
+  },
+  filename: (req, file, cb) => {
+    cb(null, file.originalname);
+  },
+});
+
+const upload = multer({ storage, limits: { fileSize: 1000000 } });
+
+app.get("/", (req, res) => {
+  return res.send("Hello, express!");
+});
+
+app.put("/photo/:id", upload.single("demo_image"), async (req, res) => {
+  try {
+    const doc = await User.findByIdAndUpdate(
+      req.params.id,
+      {
+        photo: req.file.filename,
+      },
+      { new: true },
+    );
+
+    return res.status(201).json(doc);
+  } catch (err) {
+    console.log(err);
+    res.status(400);
+  }
+});
 
 app.post("/register", async (req, res) => {
   try {
-    const { firstName, lastName, email, password: pass, role } = req.body;
+    const {
+      firstName,
+      lastName,
+      email,
+      password: pass,
+      role,
+      photo,
+    } = req.body;
 
     const salt = await bcrypt.genSalt(10);
     const hash = await bcrypt.hash(pass, salt);
@@ -31,6 +73,7 @@ app.post("/register", async (req, res) => {
       email,
       password: hash,
       role,
+      photo,
     });
 
     const { password, ...userData } = user._doc;
@@ -62,9 +105,9 @@ app.post("/login", async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user._id, email: user.email }, // payload
-      process.env.JWT_SECRET, // secret
-      { expiresIn: "1h" }, // час життя
+      { id: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" },
     );
 
     res.status(200).json({ token });
@@ -72,10 +115,6 @@ app.post("/login", async (req, res) => {
     console.error(err);
     res.status(500).json({ message: err.message });
   }
-});
-
-app.get("/", (req, res) => {
-  return res.send("Hello, express!");
 });
 
 app.get("/tasks", JWTAuth, async (req, res) => {

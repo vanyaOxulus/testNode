@@ -1,4 +1,4 @@
-module.exports = async (req, res, next) => {
+export const checkRole = async (req, res, next) => {
   try {
     if (!req.user) {
       return res.status(404).send({ message: "User not Found" });
